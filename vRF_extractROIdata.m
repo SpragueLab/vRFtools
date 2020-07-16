@@ -49,7 +49,7 @@ root_rf = sprintf('%s/retinotopy/',root);
 
 % in case ROIs live somewhere else...
 root_ROI = root_rf;
-ROI_dir = 'rois_25mm'; % which ROIs are we using? (vox size...)
+ROI_dir = 'rois'; % which ROIs are we using? (vox size...)
 
 if nargin < 3 || isempty(ROIs)
     ROIs = {'V1','V2','V3','V3AB','hV4','VO1','VO2','LO1','LO2','TO1','TO2'};%,'IPS0','IPS1','IPS2','IPS3','sPCS','iPCS'};
@@ -60,7 +60,7 @@ roi_str = cell(size(ROIs));
 
 
 % which functional files do we want? func or surf
-func_type = 'surf_25mm'; % 'surf' or 'func' or 'ss5'
+func_type = 'ss5'; % 'surf' or 'func' or 'ss5' or 'surf_25mm'
 
 %func_file = sprintf('%s_volreg_normPctDet*.nii.gz',func_type); % search for this in SUBJ/SESS
 func_file = sprintf('r*_%s.nii.gz',func_type); % search for SUBJ_SESS.<this> in SUBJ/SESS
