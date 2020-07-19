@@ -2,6 +2,20 @@
 %
 % use barret-based RF models to predict response to hexMap stimuli
 %
+% USAGE:
+%   vRF_testRFpredictions - computes & plots w/ default subj/ROI/param set
+%   
+%   vRF_testRFpredictions(subj,ret_sess,hex_sess,data_type,ROI,VEthresh)
+%    (or any subset of params) - uses the specified subj/ROI/etc for
+%    plotting
+%
+%   [allvox_R2, allvox_pred, allvox_meas] = vRF_testRFpredictions(...)
+%    foregoes all plotting and returns R^2, predicted response, and
+%    measured response for all voxels selected based on VEthresh
+%
+% note that VEthresh is applied based on the ret_data, not hexMap - though
+% in pricniple these should usually be the same...
+%
 % - in principle, we should be able to do this for any arbitrary stimulus -
 % so in the future we'll just leverage the as-yet-not-existing
 % vRF_makePredictions.m function, which takes in an RF model/s and
@@ -22,7 +36,7 @@
 % TCS 7/16/2020
 
 
-function [allvox_R2,allvox_pred,allvox_meas] = vRF_testRFpredictions(subj,ret_sess,hex_sess,data_type,ROI,VEthresh)
+function [allvox_R2,allvox_pred,allvox_meas,allvox_idx] = vRF_testRFpredictions(subj,ret_sess,hex_sess,data_type,ROI,VEthresh)
 
 
 
@@ -151,8 +165,8 @@ hex_pos  = hex_data.stim_pos_all(which_trials,:);
 %% evaluate how strong prediction is (corr? regression?)
 
 % correlation (rho)
-pred_corr = corr(pred_resp_hex,hex_resp);
-pred_corr = diag(pred_corr);
+pred_corr = diag(corr(pred_resp_hex,hex_resp));
+
 
 % regression R^2
 pred_reg_R2 = nan(size(pred_resp_hex,2),1);
@@ -164,23 +178,27 @@ for vv = 1:size(pred_resp_hex,2)
     clear tmptstats;
 end
 
-% TODO: plot visual field, color vox based on hex_map R2
-figure;
-subplot(1,2,1); hold on;
-scatter(ret_data.rf.x0(voxidx),ret_data.rf.y0(voxidx),25,pred_reg_R2,'Filled','MarkerFaceAlpha',0.5);
-colormap viridis;
-axis square equal;
-title('Predicted R^2 (hexMap)');
-
-subplot(1,2,2); hold on;
-scatter(ret_data.rf.x0(voxidx),ret_data.rf.y0(voxidx),25,ret_data.rf.ve(voxidx),'Filled','MarkerFaceAlpha',0.5);
-colormap viridis;
-axis square equal;
-title('Model fit R^2 (ret)');
-
-
+if nargout == 0
+    
+    % plot visual field, color vox based on hex_map R2
+    figure;
+    subplot(1,2,1); hold on;
+    scatter(ret_data.rf.x0(voxidx),ret_data.rf.y0(voxidx),25,pred_reg_R2,'Filled','MarkerFaceAlpha',0.5);
+    colormap viridis;
+    axis square equal;
+    title('Predicted R^2 (hexMap)');
+    
+    subplot(1,2,2); hold on;
+    scatter(ret_data.rf.x0(voxidx),ret_data.rf.y0(voxidx),25,ret_data.rf.ve(voxidx),'Filled','MarkerFaceAlpha',0.5);
+    colormap viridis;
+    axis square equal;
+    title('Model fit R^2 (ret)');
+    
+end
 
 %% plot RF profile and measured response on each hexMap trial
+
+if nargout == 0 
 
 [~,sorted_vox_idx] = sort(pred_reg_R2,'descend');
 
@@ -235,6 +253,17 @@ for vv = 1:length(vox_to_plot)
 end
 %match_xlim(scatter_ax); match_ylim(scatter_ax);
 set(scatter_ax,'YLim',[-3 3],'XLim',[-0.2 3.5]);
+
+end
+
+%% prepare variables for return
+
+allvox_R2 = pred_reg_R2;
+allvox_pred = pred_resp_hex;
+allvox_meas = hex_resp;
+allvox_idx  = voxidx;
+
+return
 
 
 % TODO: try predicted response for each point in time - regression coeff or
