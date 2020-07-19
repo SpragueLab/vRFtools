@@ -16,6 +16,9 @@
 % rather than general tools. but for now, we'll just assume that sometimes
 % you want to extract all the RF timecourses...will prove useful eventually
 %
+% NOTE: sFit/fFit computed at UCSB is a bit wonky at present - we'll just
+% use gFit for visualization for now
+%
 % Tommy Sprague, 7/13/2020 tsprague@ucsb.edu
 
 function vRF_extractROIdata(subj,sess,ROIs)
@@ -60,13 +63,14 @@ roi_str = cell(size(ROIs));
 
 
 % which functional files do we want? func or surf
-func_type = 'ss5'; % 'surf' or 'func' or 'ss5' or 'surf_25mm'
+%func_type = 'surf_25mm'; % 'surf' or 'func' or 'ss5' or 'surf_25mm'
+func_type = 'ss5';
 
 %func_file = sprintf('%s_volreg_normPctDet*.nii.gz',func_type); % search for this in SUBJ/SESS
 func_file = sprintf('r*_%s.nii.gz',func_type); % search for SUBJ_SESS.<this> in SUBJ/SESS
 
 % which RF file to load/store?           
-rf_nii = sprintf('RF_%s-fFit.nii.gz',func_type); % unsmoothed data; smoothed ersion (C2F enabled) used to make ROIs
+rf_nii = sprintf('RF_%s-gFit.nii.gz',func_type); % unsmoothed data; smoothed ersion (C2F enabled) used to make ROIs
 
 % where to look in the RF file for params (is there a way to pull this out
 % dynamically from nii? doesn't seem stored anywhere...)
