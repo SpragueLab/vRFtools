@@ -13,19 +13,56 @@
 % IMPORTANT: for now, ALWAYS use RF params from ret_data - those are using
 % gFit, others (hex) are using fFit...
 % 
+% 7/18/2020: TCS turned this into a function so that we can call for each
+% subj, ROI for computing summary stats
+%  - if no output arguments, then make plots; otherwise, skip that
+%
+%
+%
 % TCS 7/16/2020
 
 
+function [allvox_R2,allvox_pred,allvox_meas] = vRF_testRFpredictions(subj,ret_sess,hex_sess,data_type,ROI,VEthresh)
+
+
+
 %% load data
+%  NOTE: inelegant right now...
 ret_root = sprintf('%s/retinotopy/retinotopy_ROIdata',vRF_loadRoot);
 hex_root = sprintf('%s/fspri_trialData',fspri_loadRoot);
 
-data_type = 'surf';
-ROI = 'V1';
-subj = 'sub003';
 
-ret_sess = 'barret01';
-hex_sess = 'fspri_pilot01_map';
+if nargin < 1 || isempty(subj)
+    subj = 'sub003';
+end
+
+if nargin < 2 || isempty(ret_sess)
+    ret_sess = 'barret01';
+end
+
+if nargin < 3 || isempty(hex_sess)
+    hex_sess = 'fspri_pilot01_map';
+end
+
+if nargin < 4 || isempty(data_type)
+    data_type = 'surf';
+end
+
+if nargin < 5 || isempty(ROI)
+    ROI = 'V1';
+end
+
+if nargin < 6 || isempty(VEthresh)
+    VEthresh = 0.50;
+end
+
+
+% data_type = 'surf';
+% ROI = 'V1';
+% subj = 'sub003';
+% 
+% ret_sess = 'barret01';
+% hex_sess = 'fspri_pilot01_map';
 
 ret_data_fn = sprintf('%s/%s_%s_%s_%s_25mm.mat',ret_root,subj,ret_sess,ROI,data_type);
 hex_data_fn = sprintf('%s/%s_%s_%s_%s_trialData.mat',hex_root,subj,hex_sess,ROI,data_type);
@@ -33,7 +70,7 @@ hex_data_fn = sprintf('%s/%s_%s_%s_%s_trialData.mat',hex_root,subj,hex_sess,ROI,
 ret_data = load(ret_data_fn);
 hex_data = load(hex_data_fn);
 
-VEthresh = 0.5; 
+% VEthresh = 0.5; 
 
 which_vox  = ret_data.rf.ve>=VEthresh;
 %which_vox2 = hex_data.rf.ve>=VEthresh;
@@ -80,7 +117,7 @@ end
 stim_mask = nan(size(hex_data.c_all,1),res.^2);
 
 for tt = 1:size(hex_data.c_all,1)
-    stim_mask(tt,:) = hypot(scrx-hex_data.stim_pos_all(tt,1),scry-hex_data.stim_pos_all(tt,2))<=hex_data.p_all.size;
+    stim_mask(tt,:) = hypot(scrx-hex_data.stim_pos_all(tt,1),scry-(-1*hex_data.stim_pos_all(tt,2)))<=hex_data.p_all.size;
 end
 
 % scale stim mask like mrVista does for RF estimation
