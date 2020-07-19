@@ -7,7 +7,7 @@
 % - best-fit RFs (rf. struct)
 % - data used to fit model (bar_width_1.nii.gz files...) [z-scored and psc]
 % - 'raw' data from each imaging run [z-scored and psc]
-% - stimulus sequence (?)
+% - stimulus sequence [yes, 7/19/2020]
 %
 % voxel selection IDENTICAL to fspri script, so those 'mapping' data can be
 % loaded to compare
@@ -35,7 +35,6 @@ end
 if nargin < 2 || isempty(subj)
     % TODO: if no defined sessions, use all....
     sess = {{'barret01'},{'barret01'},{'barret01'}};
-    %sess = {{'fspri_pilot01_fspri','fspri_pilot01_map'},{'fspri_pilot01_fspri','fspri_pilot01_map'},{'fspri_pilot01_fspri','fspri_pilot01_map'}};
     
 end
 
@@ -68,6 +67,10 @@ func_type = 'ss5';
 
 %func_file = sprintf('%s_volreg_normPctDet*.nii.gz',func_type); % search for this in SUBJ/SESS
 func_file = sprintf('r*_%s.nii.gz',func_type); % search for SUBJ_SESS.<this> in SUBJ/SESS
+
+%stim_file = sprintf('%s/%s/',root,task_dir,subj);
+stim_file   = 'bar_stimulus_masks_1300ms_images.mat';
+params_file = 'bar_stimulus_masks_1300ms_params.mat';
 
 % which RF file to load/store?           
 rf_nii = sprintf('RF_%s-gFit.nii.gz',func_type); % unsmoothed data; smoothed ersion (C2F enabled) used to make ROIs
@@ -155,6 +158,18 @@ for ss = 1:length(subj)
     
     
     for sess_idx = 1:length(sess{ss})
+        
+        
+        % load stimuli & params
+        stim_fn   = sprintf('%s/%s/%s/%s/%s_%s_vista/Stimuli/%s',root,task_dir,subj{ss},sess{ss}{sess_idx},subj{ss},sess{ss}{sess_idx},stim_file  );
+        params_fn = sprintf('%s/%s/%s/%s/%s_%s_vista/Stimuli/%s',root,task_dir,subj{ss},sess{ss}{sess_idx},subj{ss},sess{ss}{sess_idx},params_file);
+        
+        stimdata   = load(stim_fn);
+        paramsdata = load(params_fn);
+        stim_imgs = stimdata.images;
+        stim_time = paramsdata.stimulus.seqtiming;
+        clear stimdata paramsdata;
+        
         
         % load 'raw' data
                
@@ -261,7 +276,7 @@ for ss = 1:length(subj)
             
             fn2s = sprintf('%s%s/%s_ROIdata/%s_%s_%s_%s.mat',root,task_dir,task_dir,subj{ss},sess{ss}{sess_idx},roi_str{rr},func_type);
             fprintf('saving to %s...\n',fn2s);
-            save(fn2s,'d_all','d_allz','d_avg','d_avgz','r_all','sess_all','r_all','fn_all','rf_file','rf','func_file','fn_avg');
+            save(fn2s,'d_all','d_allz','d_avg','d_avgz','r_all','sess_all','r_all','fn_all','rf_file','rf','func_file','fn_avg','stim_imgs','stim_time','stim_fn','params_fn');
             clear rf d_all d_allz d_avg d_avgz;
             
         end
