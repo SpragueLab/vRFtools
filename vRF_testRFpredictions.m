@@ -36,7 +36,7 @@
 % TCS 7/16/2020
 
 
-function [allvox_R2,allvox_pred,allvox_meas,allvox_idx] = vRF_testRFpredictions(subj,ret_sess,hex_sess,data_type,ROI,VEthresh)
+function [allvox_R2,allvox_corr,allvox_pred,allvox_meas,allvox_idx] = vRF_testRFpredictions(subj,ret_sess,hex_sess,data_type,ROI,VEthresh)
 
 
 
@@ -47,7 +47,7 @@ hex_root = sprintf('%s/fspri_trialData',fspri_loadRoot);
 
 
 if nargin < 1 || isempty(subj)
-    subj = 'sub003';
+    subj = 'sub004';
 end
 
 if nargin < 2 || isempty(ret_sess)
@@ -81,18 +81,23 @@ end
 ret_data_fn = sprintf('%s/%s_%s_%s_%s_25mm.mat',ret_root,subj,ret_sess,ROI,data_type);
 hex_data_fn = sprintf('%s/%s_%s_%s_%s_trialData.mat',hex_root,subj,hex_sess,ROI,data_type);
 
+fprintf('Loading retinotopy data from %s\n',ret_data_fn);
 ret_data = load(ret_data_fn);
+
+fprintf('Loading hexMap data from %s\n',hex_data_fn);
 hex_data = load(hex_data_fn);
 
-% VEthresh = 0.5; 
+% TRs to use for evoked stimulus response
+stim_range = [7 10]; 
 
-which_vox  = ret_data.rf.ve>=VEthresh;
-%which_vox2 = hex_data.rf.ve>=VEthresh;
+hex_resp = mean(hex_data.dt_allz(:,:,hex_data.which_TRs>=stim_range(1) & hex_data.which_TRs<=stim_range(2)),3);
 
-%if sum(which_vox==which_vox2)~=length(which_vox)
-%    error('uh oh...');
-%end
-clear which_vox2;
+
+% only consider voxels that are (a) above VE thresh and (b) have variable
+% response across trials
+which_vox  = ret_data.rf.ve>=VEthresh & std(hex_resp,[],1)~=0;
+
+
 
 
 %% make RF profile for each voxel
@@ -144,10 +149,6 @@ pred_resp_hex = (stim_mask*vox_mask.').^ret_data.rf.exp(voxidx);
 
 %% process 'challenge' dataset to n_trials x n_vox responses
 
-% TRs to use for evoked stimulus response
-stim_range = [7 10]; 
-
-hex_resp = mean(hex_data.dt_allz(:,:,hex_data.which_TRs>=stim_range(1) & hex_data.which_TRs<=stim_range(2)),3);
 
 % limit hex_resp to only 'valid' voxels (those that have VE above our
 % thresh above)
@@ -203,7 +204,10 @@ if nargout == 0
 [~,sorted_vox_idx] = sort(pred_reg_R2,'descend');
 
 offset = sum(isnan(pred_reg_R2)); % because there's a nan because we're including one all-zeros vox...
-vox_to_plot = sorted_vox_idx(offset+16:21); % 16, 17, 18, 19, 20, 21 - sub003, V1
+vox_to_plot = sorted_vox_idx(offset+[1 10 17]); % 16, 17, 18, 19, 20, 21 - sub003, V1
+% sub004 - V1, 1 9 17
+% sub002 - V1 or V3  1 10 17 (for progress report, use v3)
+%vox_to_plot = sorted_vox_idx(offset+1:5:25);
 
 circth = linspace(0,2*pi,1001);
 circx  = cos(circth);
@@ -220,7 +224,7 @@ for vv = 1:length(vox_to_plot)
     % plot RF and predicted response for each trial
     subplot(length(vox_to_plot),3,1+(vv-1)*3); hold on;
     plot(ret_data.rf.x0(voxidx(vox_to_plot(vv)))+circx*ret_data.rf.sigma(voxidx(vox_to_plot(vv))),...
-         ret_data.rf.y0(voxidx(vox_to_plot(vv)))+circy*ret_data.rf.sigma(voxidx(vox_to_plot(vv))),...
+      -1*ret_data.rf.y0(voxidx(vox_to_plot(vv)))+circy*ret_data.rf.sigma(voxidx(vox_to_plot(vv))),...
         'k-','LineWidth',1.5);
     
     % here - scatter is most efficient way to show the predicted response for
@@ -232,7 +236,7 @@ for vv = 1:length(vox_to_plot)
     % plot RF and *measured* response on each trial
     subplot(length(vox_to_plot),3,2+(vv-1)*3); hold on;
     plot( ret_data.rf.x0(voxidx(vox_to_plot(vv)))+circx*ret_data.rf.sigma(voxidx(vox_to_plot(vv))),...
-          ret_data.rf.y0(voxidx(vox_to_plot(vv)))+circy*ret_data.rf.sigma(voxidx(vox_to_plot(vv))),...
+       -1*ret_data.rf.y0(voxidx(vox_to_plot(vv)))+circy*ret_data.rf.sigma(voxidx(vox_to_plot(vv))),...
         'k-','LineWidth',1.5);
     
     % here - scatter is most efficient way to show the predicted response for
@@ -245,20 +249,21 @@ for vv = 1:length(vox_to_plot)
     scatter_ax(vv) = subplot(length(vox_to_plot),3,vv*3); hold on;
     plot(pred_resp_hex(:,vox_to_plot(vv)),hex_resp(:,vox_to_plot(vv)),'.','MarkerSize',5,'Color',[0 0 0 0.5]);
     % add regression line?
-    axis square equal;
+    axis equal;
     ylabel('Measured');
     xlabel('Predicted');
     
     
 end
 %match_xlim(scatter_ax); match_ylim(scatter_ax);
-set(scatter_ax,'YLim',[-3 3],'XLim',[-0.2 3.5]);
+set(scatter_ax,'YLim',[-3 3],'XLim',[-0.2 2.0],'TickDir','out');
 
 end
 
 %% prepare variables for return
 
 allvox_R2 = pred_reg_R2;
+allvox_corr = pred_corr;
 allvox_pred = pred_resp_hex;
 allvox_meas = hex_resp;
 allvox_idx  = voxidx;
