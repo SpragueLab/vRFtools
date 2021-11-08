@@ -4,7 +4,7 @@
 % saves data into ROI files for each subj, session
 %
 % stores:
-% - best-fit RFs (rf. struct)
+% - best-fit RFs (rf. struct) - from sess_rf
 % - data used to fit model (bar_width_1.nii.gz files...) [z-scored and psc]
 % - 'raw' data from each imaging run [z-scored and psc]
 % - stimulus sequence [yes, 7/19/2020]
@@ -28,13 +28,16 @@ root = vRF_loadRoot;
 
 if nargin < 1 || isempty(subj)
     
-     subj = {'sub002','sub003','sub004'};
+     %subj = {'sub002','sub003','sub004'};
+     subj = {'sub003','sub004'};
 end
 
 % this is the sessions to extract data from...
 if nargin < 2 || isempty(subj)
     % TODO: if no defined sessions, use all....
-    sess = {{'barret01'},{'barret01'},{'barret01'}};
+    %sess = {{'barret01'},{'barret01','barret_attnCont_sess01','barret_attnSeq1_sess01','barret_attnSeq2_sess01'},{'barret01','barret_attnCont_sess01','barret_attnSeq1_sess01','barret_attnSeq2_sess01'}};
+    %sess = {{'barret_attnCont_sess01','barret_attnSeq1_sess01','barret_attnSeq2_sess01'},{'barret_attnCont_sess01','barret_attnSeq1_sess01','barret_attnSeq2_sess01'}};
+    sess = {{'barret_attnSeq2_sess01'},{'barret_attnSeq2_sess01'}};
     
 end
 
@@ -42,7 +45,10 @@ end
 % should work ok
 sess_rf = cell(length(subj),1);
 for ss = 1:length(subj)
-    sess_rf{ss} = 'barret01';
+    %sess_rf{ss} = 'barret01';
+    %sess_rf{ss} = 'barret_contwidth_pilot01';
+    %sess_rf{ss} = 'barret_attnCont_sess01';
+    sess_rf{ss} = 'barret_attnSeq2_sess01';
 end
 
 % should work...
@@ -54,23 +60,25 @@ root_ROI = root_rf;
 ROI_dir = 'rois_25mm'; % which ROIs are we using? (vox size...)
 
 if nargin < 3 || isempty(ROIs)
-    ROIs = {'V1','V2','V3','V3AB','hV4','VO1','VO2','LO1','LO2','TO1','TO2'};%,'IPS0','IPS1','IPS2','IPS3','sPCS','iPCS'};
+    ROIs = {'V1','V2','V3','V3AB','hV4','VO1','VO2','LO1','LO2','TO1','TO2','IPS0','IPS1','IPS2','IPS3'};
 end
 
 roi_str = cell(size(ROIs));
 
-
+task_TRs = 460;
 
 % which functional files do we want? func or surf
-func_type = 'surf_25mm'; % 'surf' or 'func' or 'ss5' or 'surf_25mm'
-%func_type = 'ss5';
+%func_type = 'surf_25mm'; % 'surf' or 'func' or 'ss5' or 'surf_25mm'
+func_type = 'ss5';
 
 %func_file = sprintf('%s_volreg_normPctDet*.nii.gz',func_type); % search for this in SUBJ/SESS
 func_file = sprintf('r*_%s.nii.gz',func_type); % search for SUBJ_SESS.<this> in SUBJ/SESS
 
 %stim_file = sprintf('%s/%s/',root,task_dir,subj);
-stim_file   = 'bar_stimulus_masks_1300ms_images.mat';
-params_file = 'bar_stimulus_masks_1300ms_params.mat';
+%stim_file   = 'bar_stimulus_masks_1300ms_images.mat';
+%params_file = 'bar_stimulus_masks_1300ms_params.mat';
+stim_file   = 'bar_stimulus_masks_750ms_images.mat';
+params_file = 'bar_stimulus_masks_750ms_params.mat';
 
 % which RF file to load/store?           
 rf_nii = sprintf('RF_%s-gFit.nii.gz',func_type); % unsmoothed data; smoothed ersion (C2F enabled) used to make ROIs
@@ -94,6 +102,7 @@ for ss = 1:length(subj)
     % load all ROIs, best-fit RF data
 
     rf_file = sprintf('%s%s/%s/%s_%s_vista/%s',root_rf,subj{ss},sess_rf{ss},subj{ss},sess_rf{ss},rf_nii);
+    %rf_file = sprintf('%s%s/%s/%s_%s_vista/%s',root_rf,subj{ss},sess_rf{ss},subj{ss},sess_rf{ss},rf_nii);
     fprintf('Loading RF params from %s\n',rf_file);
     rfnii = niftiRead(rf_file);
     
@@ -173,7 +182,7 @@ for ss = 1:length(subj)
         
         % load 'raw' data
                
-        task_TRs = 304;
+
         
         % loop through all funcPrefix files within subj, sess and determine
         % which is map and which is task based on num TRs
