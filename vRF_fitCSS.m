@@ -38,6 +38,9 @@
 
 function [bestfit_params, param_names, bestfit_pred] = vRF_fitCSS(fitdata,stimmask,stimcoords,samplingrate)
 
+% params that govern memory usage, etc
+models_per_iter = 10000; % for generating model predictions, how many at a time?
+
 
 % some 'default' params (TODO)
 gridparams_dxy  = 0.25; % for gridfit, how closely to sample X,Y
@@ -48,6 +51,8 @@ gridparams_dexp = 0.15;  % for gridfit, how closely to sample exponent
 % check params...
 % TODO
 
+% make sure stimcoords is cell array of X, Y stimulus coordinates &
+% reformat if necessary
 if ~iscell(stimcoords)
     if ismember(2,size(stimcoords))
         % TODO - this is a guess....need to verify...
@@ -62,7 +67,7 @@ end
 
 
 
-% generate parameter grid for initial coarse search
+%% generate parameter grid for initial 'coarse' search
 
 % x, y - default to square grid, constrained to a circle with radius equal
 % to maximum hypotenuse of stimulus grid (e.g., corners)
@@ -76,17 +81,13 @@ gridlims_xy = [-1 1] .* n_steps_xy*gridparams_dxy;
 xpts = linspace(gridlims_xy(1),gridlims_xy(2),n_steps_xy*2+1);
 ypts = linspace(gridlims_xy(1),gridlims_xy(2),n_steps_xy*2+1);
 
-
 % sigma - small (~0.1 dva) to very big (~75% screen size)
 gridlims_sig = [0.1 (0.75*maxecc)];
 sigpts = gridlims_sig(1):gridparams_dsig:gridlims_sig(2);
 
-
-
 % exponent - small (0.1) to linear (1)
 gridlims_exp = [0.1 1];
 exppts = gridlims_exp(1):gridparams_dexp:gridlims_exp(2);
-
 
 % grid of everythign except x,y (which need to stay together)
 [gridx,gridy,gridsig,gridexp] = ndgrid(xpts,ypts,sigpts,exppts);
@@ -101,13 +102,49 @@ tmpecc = hypot(gridparams(:,1),gridparams(:,2));
 gridparams = gridparams(tmpecc<=maxecc,:); clear tmpecc;
 
 
+%% use parameter grid to generate RF profiles
 
-% use gridfit functions to create RF profiles for each grid point
+[scrptsX,scrptsY] = meshgrid(stimcoords{1},stimcoords{2});
+scrptsX = scrptsX(:); scrptsY = scrptsY(:); % resahpe to column vectors
+scrpts = [scrptsX.'; scrptsY.'];
+
+% NOTE: the below need to be broken up a bit - maybe in groups of 25k
+% models?
+
+% reshape stimulus mask into n_pixels x n_tpts
+stimmask_mat = reshape(stimmask,length(scrptsX),size(stimmask,3));
+
+
+% compute HRF convolution kernel
+
+niter = ceil(size(gridparams,1)/models_per_iter);
+startidx = 1;
+
+for iter = 1:niter
+
+    % pick only a subset of models to work with now
+    thisidx = startidx:(startidx+models_per_iter-1);
+    thisidx = thisidx(thisidx<=size(gridparams,1)); % cull any dangling rows
+
+    % use gridfit functions to create RF profiles for each grid point
+    thisparams = gridparams(thisidx,:);
+    thisfilt = vRF_2dGaussian_nonlinear(scrpts,thisparams);
+
+    % generate predicted timeseries for each gridfit point
+    thispred = (thisfilt * stimmask_mat) .^ thisparams(:,4);
+
+    % convolve with HRF
+
+
+    clear thisfilt;
+    startidx = thisidx(end)+1;
+end
+clear startidx;
 
 
 
 
-% generate predicted timeseries for each gridfit point
+
 
 
 
