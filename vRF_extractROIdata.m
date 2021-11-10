@@ -33,7 +33,7 @@ if nargin < 1 || isempty(subj)
 end
 
 % this is the sessions to extract data from...
-if nargin < 2 || isempty(subj)
+if nargin < 2 || isempty(sess)
     % TODO: if no defined sessions, use all....
     %sess = {{'barret01'},{'barret01','barret_attnCont_sess01','barret_attnSeq1_sess01','barret_attnSeq2_sess01'},{'barret01','barret_attnCont_sess01','barret_attnSeq1_sess01','barret_attnSeq2_sess01'}};
     %sess = {{'barret_attnCont_sess01','barret_attnSeq1_sess01','barret_attnSeq2_sess01'},{'barret_attnCont_sess01','barret_attnSeq1_sess01','barret_attnSeq2_sess01'}};
@@ -48,7 +48,7 @@ for ss = 1:length(subj)
     %sess_rf{ss} = 'barret01';
     %sess_rf{ss} = 'barret_contwidth_pilot01';
     %sess_rf{ss} = 'barret_attnCont_sess01';
-    sess_rf{ss} = 'barret_attnSeq2_sess01';
+    sess_rf{ss} = 'barret_contwidth01';
 end
 
 % should work...
@@ -57,7 +57,7 @@ root_rf = sprintf('%s/retinotopy/',root);
 
 % in case ROIs live somewhere else...
 root_ROI = root_rf;
-ROI_dir = 'rois_25mm'; % which ROIs are we using? (vox size...)
+ROI_dir = 'rois'; % which ROIs are we using? (vox size...)
 
 if nargin < 3 || isempty(ROIs)
     ROIs = {'V1','V2','V3','V3AB','hV4','VO1','VO2','LO1','LO2','TO1','TO2','IPS0','IPS1','IPS2','IPS3'};

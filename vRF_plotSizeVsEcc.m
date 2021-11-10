@@ -10,7 +10,7 @@ function vRF_plotSizeVsEcc(subj,sess,ROIs,proj_dir)
 % TODO: extra input args to specify aspects of the sorting....
 
 
-VE_thresh = 0.1; % greater than or equal to this
+VE_thresh = 0.25; % greater than or equal to this
 
 ecc_thresh = 12; % less than or equal to this
 
