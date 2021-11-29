@@ -43,19 +43,24 @@ function [allvox_R2,allvox_corr,allvox_pred,allvox_meas,allvox_idx] = vRF_testRF
 %% load data
 %  NOTE: inelegant right now...
 ret_root = sprintf('%s/retinotopy/retinotopy_ROIdata',vRF_loadRoot);
-hex_root = sprintf('%s/fspri_trialData',fspri_loadRoot);
+%hex_root = sprintf('%s/bspri/bspri_trialData',vRF_loadRoot);
+%hex_root = sprintf('%s/fspri/fspri_trialData',vRF_loadRoot); % ICB
+hex_root = sprintf('%s/featSearch/featSearch_trialData',vRF_loadRoot);
 
 
 if nargin < 1 || isempty(subj)
     subj = 'sub004';
+    %subj = 'sub012';
 end
 
 if nargin < 2 || isempty(ret_sess)
     ret_sess = 'barret01';
+    %ret_sess = 'barret_contwidth01';
 end
 
 if nargin < 3 || isempty(hex_sess)
     hex_sess = 'fspri_pilot01_map';
+    %hex_sess = 'bspri_final01_map';
 end
 
 if nargin < 4 || isempty(data_type)
@@ -77,8 +82,12 @@ end
 % 
 % ret_sess = 'barret01';
 % hex_sess = 'fspri_pilot01_map';
-
-ret_data_fn = sprintf('%s/%s_%s_%s_%s_25mm.mat',ret_root,subj,ret_sess,ROI,data_type);
+if strcmpi(subj,'sub004')
+    ret_data_fn = sprintf('%s/%s_%s_%s_%s_25mm.mat',ret_root,subj,ret_sess,ROI,data_type);
+else
+    ret_data_fn = sprintf('%s/%s_%s_%s_%s.mat',ret_root,subj,ret_sess,ROI,data_type);
+end
+%ret_data_fn = sprintf('%s/%s_%s_%s_%s.mat',ret_root,subj,ret_sess,ROI,data_type);
 hex_data_fn = sprintf('%s/%s_%s_%s_%s_trialData.mat',hex_root,subj,hex_sess,ROI,data_type);
 
 fprintf('Loading retinotopy data from %s\n',ret_data_fn);

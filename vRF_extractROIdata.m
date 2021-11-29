@@ -21,34 +21,42 @@
 %
 % Tommy Sprague, 7/13/2020 tsprague@ucsb.edu
 
-function vRF_extractROIdata(subj,sess,ROIs)
+function vRF_extractROIdata(subj,sess,sess_rf,ROIs)
 
 task_dir = 'retinotopy';
 root = vRF_loadRoot;
 
 if nargin < 1 || isempty(subj)
-    
-     %subj = {'sub002','sub003','sub004'};
-     subj = {'sub003','sub004'};
+    % NOTE: for sub004, need to use _25mm files...
+    subj = {'sub006','sub007','sub008','sub010','sub011','sub012'};
+    %subj = {'sub003'};
+    %subj = {'sub004'};
 end
 
 % this is the sessions to extract data from...
 if nargin < 2 || isempty(sess)
-    % TODO: if no defined sessions, use all....
-    %sess = {{'barret01'},{'barret01','barret_attnCont_sess01','barret_attnSeq1_sess01','barret_attnSeq2_sess01'},{'barret01','barret_attnCont_sess01','barret_attnSeq1_sess01','barret_attnSeq2_sess01'}};
-    %sess = {{'barret_attnCont_sess01','barret_attnSeq1_sess01','barret_attnSeq2_sess01'},{'barret_attnCont_sess01','barret_attnSeq1_sess01','barret_attnSeq2_sess01'}};
-    sess = {{'barret_attnSeq2_sess01'},{'barret_attnSeq2_sess01'}};
     
+    % ALL SUBJ:
+    % sess = {{'barret_contwidth_pilot01'},{'barret01'},{'barret_contwidth_pilot02'},{'barret_contwidth01_nosacc'},{'barret_contwidth_pilot01'},{'barret_contwidth01'},{'barret_contwidth01'},{'barret_contwidth01'}};
+    sess = {{'barret_contwidth_pilot02'},{'barret_contwidth01_nosacc'},{'barret_contwidth_pilot01'},{'barret_contwidth01'},{'barret_contwidth01'},{'barret_contwidth01'}}; % all but sub003 and sub004
+    %sess = {{'barret_contwidth_pilot01'}}; % sub003
+    %sess = {{'barret01'}}; % sub004
 end
 
 % heuristic for defining RF session - can make more explicit, but this
 % should work ok
-sess_rf = cell(length(subj),1);
-for ss = 1:length(subj)
-    %sess_rf{ss} = 'barret01';
-    %sess_rf{ss} = 'barret_contwidth_pilot01';
-    %sess_rf{ss} = 'barret_attnCont_sess01';
-    sess_rf{ss} = 'barret_contwidth01';
+if nargin < 3 || isempty(sess_rf)
+    %sess_rf = sess; % by default, load the RF fits from the same place as we load the retinotopy data
+    for ss = 1:length(subj)
+        sess_rf{ss} = sess{ss}{1};
+    end
+%     sess_rf = cell(length(subj),1);
+%     for ss = 1:length(subj)
+%         %sess_rf{ss} = 'barret01';
+%         sess_rf{ss} = 'barret_contwidth01';
+%         %sess_rf{ss} = 'barret_attnCont_sess01';
+%         %sess_rf{ss} = 'barret_attnCont_sess01';
+%     end
 end
 
 % should work...
@@ -58,18 +66,21 @@ root_rf = sprintf('%s/retinotopy/',root);
 % in case ROIs live somewhere else...
 root_ROI = root_rf;
 ROI_dir = 'rois'; % which ROIs are we using? (vox size...)
+%ROI_dir = 'rois_25mm';
 
-if nargin < 3 || isempty(ROIs)
+if nargin < 4 || isempty(ROIs)
     ROIs = {'V1','V2','V3','V3AB','hV4','VO1','VO2','LO1','LO2','TO1','TO2','IPS0','IPS1','IPS2','IPS3'};
 end
 
 roi_str = cell(size(ROIs));
 
-task_TRs = 460;
+%task_TRs = 304; % for sub004's 1.3 s TR data, 304 TRs
+%task_TRs = 448; % for sub003's earlier version, 448 TRs
+task_TRs = 460; % all other subj (sub006, sub007, sub008, sub010, sub011, sub012) - 460 TRs
 
 % which functional files do we want? func or surf
-%func_type = 'surf_25mm'; % 'surf' or 'func' or 'ss5' or 'surf_25mm'
-func_type = 'ss5';
+%func_type = 'surf_25mm'; % 'surf' or 'func' or 'ss5' or 'surf_25mm' (sub004)
+func_type = 'surf'; % all but sub004
 
 %func_file = sprintf('%s_volreg_normPctDet*.nii.gz',func_type); % search for this in SUBJ/SESS
 func_file = sprintf('r*_%s.nii.gz',func_type); % search for SUBJ_SESS.<this> in SUBJ/SESS

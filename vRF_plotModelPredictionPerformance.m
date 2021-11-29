@@ -12,15 +12,22 @@ function vRF_plotModelPredictionPerformance(subj,ret_sess,hex_sess,ROIs,VEthresh
 data_type = 'surf'; % unlikely we'll change this across runs...
 
 if nargin < 1 || isempty(subj)
-    subj = {'sub002','sub003','sub004'};
+    %subj = {'sub002','sub003','sub004'}; % ICB progress report 2020 subj
+    subj = {'sub003','sub006','sub007','sub008','sub010','sub011','sub012'};
+    subj = {'sub012'};
 end
 
 if nargin < 2 || isempty(ret_sess)
-    ret_sess = {'barret01','barret01','barret01'};
+    % ret_sess = {'barret01','barret01','barret01'};
+    %ret_sess = {'barret_contwidth_pilot01','barret01','barret_contwidth_pilot02','barret_contwidth01_nosacc','barret_contwidth_pilot01','barret_contwidth01','barret_contwidth01','barret_contwidth01'};
+    ret_sess = {'barret_contwidth_pilot01','barret_contwidth_pilot02','barret_contwidth01_nosacc','barret_contwidth_pilot01','barret_contwidth01','barret_contwidth01','barret_contwidth01'};
+    ret_sess = {'barret_contwidth01'};
 end
 
 if nargin < 3 || isempty(hex_sess)
-    hex_sess = {'fspri_pilot01_map','fspri_pilot01_map','fspri_pilot01_map'};
+    %hex_sess = {'fspri_pilot01_map','fspri_pilot01_map','fspri_pilot01_map'};
+    %hex_sess = {'bspri_final01_map','bspri_final01_map','bspri_final01_map','bspri_final01_map','bspri_final01_map','bspri_final01_map','bspri_final01_map'};
+    hex_sess = {'featSearch_pilot01_map'};
 end
 
 if nargin < 4 || isempty(ROIs)
