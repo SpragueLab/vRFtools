@@ -39,12 +39,12 @@
 function [bestfit_params, param_names, bestfit_pred] = vRF_fitCSS(fitdata,stimmask,stimcoords,samplingrate)
 
 % params that govern memory usage, etc
-models_per_iter = 10000; % for generating model predictions, how many at a time?
+models_per_iter = 5000; % for generating model predictions, how many at a time?
 
 
 % some 'default' params (TODO)
-gridparams_dxy  = 0.25; % for gridfit, how closely to sample X,Y
-gridparams_dsig = 0.35; % for gridfit, how closely to sample sigma
+gridparams_dxy  = 0.5; % 0.25; % for gridfit, how closely to sample X,Y
+gridparams_dsig = 0.7; % 0.35; % for gridfit, how closely to sample sigma
 gridparams_dexp = 0.15;  % for gridfit, how closely to sample exponent
 
 
@@ -111,14 +111,22 @@ scrpts = [scrptsX.'; scrptsY.'];
 % NOTE: the below need to be broken up a bit - maybe in groups of 25k
 % models?
 
-% reshape stimulus mask into n_pixels x n_tpts
+% reshape stimulus mask into n_pixels x n_tpts, normalize by pixel area
+% (resp/deg^2)
 stimmask_mat = reshape(stimmask,length(scrptsX),size(stimmask,3));
+stimmask_mat = stimmask_mat * (stimcoords{1}(2) - stimcoords{1}(1)) * (stimcoords{2}(2) - stimcoords{2}(1));
 
 
-% compute HRF convolution kernel
+% compute HRF convolution kernel, normalize
+hrf_tpts = 0:samplingrate:35;
+hrf_kernel = rmHrfTwogammas(hrf_tpts); % use default params...
+hrf_kernel = hrf_kernel./(sum(hrf_kernel).*samplingrate); % normalize kernel according to volume
 
+%% generate predictions
 niter = ceil(size(gridparams,1)/models_per_iter);
 startidx = 1;
+
+allpredbold = nan(size(gridparams,1),size(stimmask_mat,2));
 
 for iter = 1:niter
 
@@ -134,16 +142,29 @@ for iter = 1:niter
     thispred = (thisfilt * stimmask_mat) .^ thisparams(:,4);
 
     % convolve with HRF
+    % for now, use rmHrfTwogammas.m, which is what we've used from vista
+    % before
+    %thispredbold = conv(thispred,hrf_kernel,'same');
+    %thispredbold = filter(hrf_kernel(:),1,thispred,[],2); % based on vista
+    allpredbold(thisidx,:) = filter(hrf_kernel(:),1,thispred,[],2); % based on vista
 
-
-    clear thisfilt;
+    clear thisfilt thisparams thispred;
     startidx = thisidx(end)+1;
 end
 clear startidx;
 
+%% run gridfit routines
 
 
 
+
+
+
+
+
+bestfit_params = nan;
+param_names = {'x0','y0','sigma','exp','amp','baseline','ve'}; 
+bestfit_pred = nan;
 
 
 
