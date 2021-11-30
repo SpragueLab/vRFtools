@@ -4,7 +4,7 @@
 %
 % TCS 11/9/2021
 
-
+show_plots = 0;
 
 %% EXAMPLE 1: model fits on extracted ROI data
 % first - we'll assume we've extracted ROI data, for simplicity (and
@@ -52,6 +52,17 @@ samplingrate = roi_data.stim_time(2)-roi_data.stim_time(1);
 
 [thisparams,thisnames,thispred] = vRF_fitCSS(fitdata,stimmask,stimcoords,samplingrate);
 
+% plot a few example voxels
+if show_plots == 1
+    startvox = 151; nrows = 3; ncols = 5; voxidx = startvox:(startvox+nrows*ncols-1);
+    figure;
+    for ii = 1:length(voxidx)
+        subplot(nrows,ncols,ii); hold on;
+        plot(samplingrate*(1:size(fitdata,1)), fitdata (:,voxidx(ii)) );
+        plot(samplingrate*(1:size(fitdata,1)), thispred(:,voxidx(ii)) );
+        title(sprintf('Voxel %i',voxidx(ii)));
+    end
+end
 % version 2: use (Y*X) x tpts
 % TODO
 
