@@ -41,6 +41,10 @@ function [bestfit_params, param_names, bestfit_pred] = vRF_fitCSS(fitdata,stimma
 % params that govern memory usage, etc
 models_per_iter = 5000; % for generating model predictions, how many at a time?
 
+% parallel setting: 0 = no parallel, n (where n > 0) = run parpool w/ n
+% workers, -n  = run parpool w/ n workers and use GPU (so n must be <= #
+% GPUs)
+par_setting = -1;
 
 % some 'default' params (TODO)
 gridparams_dxy  = 0.5; % 0.25; % for gridfit, how closely to sample X,Y
@@ -155,16 +159,64 @@ clear startidx;
 
 %% run gridfit routines
 
+% TODO: remove predictions that are excessively close to 0
+stdcutoff = 0.25;
+tmpstd = std(allpredbold,[],2); % compute standard deviation over predictions, remove those that are too small
+badidx = tmpstd<stdcutoff;
+
+fprintf('Culling %i (%.02f%%) of models...\n',sum(badidx),100*mean(badidx));
+
+allpredbold = allpredbold(~badidx,:);
+gridparams = gridparams(~badidx,:);
+
+if par_setting > 0
+    parpool(par_setting);
+end
+
+if par_setting>=0
+    [bf_params, err, bf_fcn] = gridfit(fitdata,allpredbold.',gridparams,[],[],par_setting > 0);
+
+elseif par_setting <0
+
+    % gridfitgpu - this requires extracting/computing the best-fit
+    % timecourse after the grid fit...
+    gpumodel = nan(size(fitdata,1),2,size(allpredbold,1));
+    gpumodel(:,1,:) = allpredbold.';
+    gpumodel(:,2,:) = 1; % constant term
+    
+    if par_setting == -1
+        [bf_idx,bf_b,sse] = gridfitgpu(single(fitdata),single(gpumodel),0,0.125);
+    elseif par_setting < -1
+        % NOTE: right now, this is a bit slower than above, due to the
+        % overhead associated w/ spawning a parpool & distributing the task
+        [bf_idx,bf_b,sse] = gridfitgpu_par(single(fitdata),single(gpumodel),0,0.125);
+    end
+    
+    % OUTPUTS:
+    % bf_idx: 1 for each dimension (vox)
+    % bf_b:   1 for each dimension (vox), predictor
+    % sse:    1 for each dimension (vox)
+    bf_params = [gridparams(bf_idx,:) bf_b]; % n_voxels x n_params
+    bf_fcn = allpredbold(bf_idx,:) .* bf_b(:,1) + bf_b(:,2); % n_vox x n_tpts
+    err = sse;
+
+end
+
+if par_setting > 0
+    delete(gcp);
+end
+
+% TODO:
+% - compute VE based on SSE (note: make sure we know what gridfit is doing
+% w/ sse)
+% - add constrained fine-tuning
+% - (future) only compute grid predictions once...re-use across ROIs
 
 
-
-
-
-
-
-bestfit_params = nan;
-param_names = {'x0','y0','sigma','exp','amp','baseline','ve'}; 
-bestfit_pred = nan;
+% for grid...
+bestfit_params = bf_params;
+param_names = {'x0','y0','sigma','exp','amp','baseline','ve'};  % TODOO - update this
+bestfit_pred = bf_fcn.';
 
 
 
