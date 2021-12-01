@@ -198,7 +198,7 @@ elseif par_setting <0
     % sse:    1 for each dimension (vox)
     bf_params = [gridparams(bf_idx,:) bf_b]; % n_voxels x n_params
     bf_fcn = allpredbold(bf_idx,:) .* bf_b(:,1) + bf_b(:,2); % n_vox x n_tpts
-    err = sse;
+    err = sse.';
 
 end
 
@@ -206,23 +206,17 @@ if par_setting > 0
     delete(gcp);
 end
 
-% TODO:
-% - compute VE based on SSE (note: make sure we know what gridfit is doing
-% w/ sse)
-% - add constrained fine-tuning
-% - (future) only compute grid predictions once...re-use across ROIs
-
+sstotal = sum((fitdata-mean(fitdata,1)).^2,1);
+bf_ve = 1 - err ./ sstotal;
 
 % for grid...
-bestfit_params = bf_params;
-param_names = {'x0','y0','sigma','exp','amp','baseline','ve'};  % TODOO - update this
+bestfit_params = [bf_params bf_ve.'];
+param_names = {'x0','y0','sigma','exp','amp','baseline','ve'};  
 bestfit_pred = bf_fcn.';
 
-
-
-
-
-
+% TODO:
+% - add constrained fine-tuning
+% - (future) only compute grid predictions once...re-use across ROIs
 
 
 return
