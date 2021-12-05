@@ -1,6 +1,6 @@
-% run_vRFfits.m
+% test_vRFfits.m
 %
-% example script for setting up vRF fits using vRF_fitCSS.m
+% example script demonstrating how to set up vRF fits using vRF_fitCSS.m
 %
 % TCS 11/9/2021
 
