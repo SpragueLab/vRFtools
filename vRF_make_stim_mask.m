@@ -1,21 +1,50 @@
 % function vRF_make_stim_mask.m
 %
-% creates stimulus mask using p struct "p", saves to file "fn_out", renders
-% at resolution "res" (default 270x270)
+% Generates stimulus mask based on saved parameters from vRF_stim PTB
+% functions for use with voxel/population receptive field analysis code.
+% Either can save a file containing images and parameters (in mrVista
+% format), if a filename is provided, or can return the stimulus mask
+% directly (if an output argument is used). 
 %
-% fn_out should just be a prefix, no .mat - will make an _images and
-% _params file for vista
+% NOTE: mrVista assumes i,j coordinates (+y is down), while vRF_stim and 
+% vRFtools assume x,y coordinates (+y is up). Thus, the saved file will be
+% upside-down, while the output stimulus mask will be right-side up based
+% on vRFtools assumptions. 
+% 
+% INPUT:
+% - p:   structure, saved from vRF_stim stimulus presentation scripts
+% - fn_out: string, containing the prefix for the filename to save (all but
+%           the .mat) - will save out vista-style images/params files
+% - TR:  duration , in s, of the sampling rate (TR). If given in ms, will
+%        convert to s
+% - res: pixel resolution of stimulus mask to create. defaults to fairly
+%        high-resolution 270x270. Use a smaller value for faster
+%        computation, bigger value for more precision
+%
+% OUTPUT:
+% - stim_mask:  matrix (n_ypix, n_xpix, n_tpts) of stimulus mask on each TR
+%               NOTE: +y is UP ('top' rows of the matrix)
+%               NOTE: n_ypix == n_xpix right now
+% - stim_coords: vector of coordinates corresponding to rows AND columns of
+%                stim_mask (at present, square image required)
 %
 % NOTE: p.start_wait, end_wait should be integer # of TRs... (as should
 % step_dur)
 %
 % TCS, 6/12/2017
+% 
+% Updates:
+% - TCS 12/5/2021: 
+%   * added optional output argument for using this as a function
+%   * only save files if a filename is defined
+%   * updated docs above
+%   * output argument is (x,y), saved _images file is (i,j)
 
 
-function vRF_make_stim_mask(p,fn_out,TR,res)
+function [stim_mask, stim_coords] = vRF_make_stim_mask(p,fn_out,TR,res)
 
 
-if nargin < 4
+if nargin < 4 || isempty(res)
     res = 270;
 end
   
@@ -51,8 +80,10 @@ stimulus.seq = 1:n_TRs;
 % stimulus.seqtiming is TR*(stimulus.seq-1)
 stimulus.seqtiming = TR*(stimulus.seq-1);
 
-fn_seq = sprintf('%s_params.mat',fn_out);
-save(fn_seq,'stimulus');
+if ~isempty(fn_out)
+    fn_seq = sprintf('%s_params.mat',fn_out);
+    save(fn_seq,'stimulus');
+end
 
 
 % ------ IMAGES FILE ------
@@ -70,7 +101,11 @@ for tt = 1:size(p.bar_pos,1)
     
     proto_img = gg>=(sum(p.bar_pos(tt,:)) - size_all(tt)/2) & gg<=(sum(p.bar_pos(tt,:)) + size_all(tt)/2);
     
-    fprintf('Step %i, %i pixels stimulated\n',tt,sum(proto_img));
+    % only do verbose output if running to save a file (typically,
+    % manually)
+    if nargout == 0
+        fprintf('Step %i, %i pixels stimulated\n',tt,sum(proto_img));
+    end
     
     if dir_all(tt) < 2.5 % up/down - horizontal
         images(:,:,this_TR:(this_TR+TRs_per_step-1)) = repmat(proto_img.',1,res,TRs_per_step);
@@ -82,11 +117,15 @@ for tt = 1:size(p.bar_pos,1)
     
 end
 
+stim_mask = images;      % stim_mask is in x,y....
+stim_coords = gg;
 images = flipud(images); % because vista wants i,j coords
 
+if ~isempty(fn_out)
+    fn_imgs = sprintf('%s_images.mat',fn_out);
 
-fn_imgs = sprintf('%s_images.mat',fn_out);
-save(fn_imgs,'images');
+    save(fn_imgs,'images');
+end
 
 
 

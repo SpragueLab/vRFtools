@@ -10,8 +10,15 @@ show_plots = 0;
 % first - we'll assume we've extracted ROI data, for simplicity (and
 % testing)
 
+proj = 'retinotopy';
+subj = 'sub001';
+sess = 'barret_contwidth01';
+ROI  = 'V1';
+data_type = 'ss5';
+
 % this is a file extracted using vRF_extractROIdata.m
-ROI_fn = sprintf('%s/retinotopy/retinotopy_ROIdata/sub001_barret_contwidth01_V1_ss5.mat',vRF_loadRoot);
+ROI_fn = sprintf('%s/%s/%s_ROIdata/%s_%s_%s_%s.mat',vRF_loadRoot,proj,proj,subj,sess,ROI,data_type);
+%ROI_fn = sprintf('%s/retinotopy/retinotopy_ROIdata/sub001_barret_contwidth01_V1_ss5.mat',vRF_loadRoot);
 roi_data = load(ROI_fn);
 
 % the above loads a file generated using vRF_extractROIdata.m, which gives
@@ -41,16 +48,36 @@ end
 
 fitdata = mean(tmpd,3); % data to fit!
 
-% take out the stimulus mask & coordinates
-% version 1: use Y x X x tpts
-stimmask = roi_data.stim_imgs;
-maxdist = 8.75;
-stimcoords = linspace(-maxdist,maxdist,size(stimmask,1)); % this i
-% TODO: load the above....
+mask_mode = 2;
 
-samplingrate = roi_data.stim_time(2)-roi_data.stim_time(1);
+if mask_mode == 1
+    % take out the stimulus mask & coordinates
+    % version 1: use Y x X x tpts
+    stimmask = flipud(roi_data.stim_imgs); % the mask saved here is in vista coords
+    maxdist = 8.7462;
+    stimcoords = linspace(-maxdist,maxdist,size(stimmask,1)); % this i
+    samplingrate = roi_data.stim_time(2)-roi_data.stim_time(1);
+
+elseif mask_mode == 2
+    % use behavioral file for this subj to generate the stimulus mask &
+    % coordinates
+    behav_fs = sprintf('%s/%s/rawbehav/%s/%s/%s_r01_RF*.mat',vRF_loadRoot,proj,subj,sess,subj);
+    tmpf = dir(behav_fs);
+    behav_fn = sprintf('%s/%s',tmpf.folder,tmpf.name);
+    thisbehav = load(behav_fn);
+    thisbehav = thisbehav.p; % only p is saved, so let's just call thisbehav.p thisbehav
+
+    [stimmask,stimcoords] = vRF_make_stim_mask(thisbehav,[],thisbehav.TR,151);
+
+    samplingrate = thisbehav.TR;
+end
+
 
 [thisparams,thisnames,thispred] = vRF_fitCSS(fitdata,stimmask,stimcoords,samplingrate);
+
+fn2s = sprintf('%s/retinotopy/vRF_testfits/%s_%s_%s_%s_testfits_mask%i_res%i.mat',vRF_loadRoot,subj,sess,ROI,data_type,mask_mode,size(stimmask,1));
+fprintf('saving to %s\n',fn2s);
+save(fn2s,'thisparams','thisnames','thispred','mask_mode','stimmask','fitdata','ROI_fn','stimcoords');
 
 % plot a few example voxels
 if show_plots == 1
