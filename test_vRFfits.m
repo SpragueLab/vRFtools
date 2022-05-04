@@ -73,11 +73,11 @@ elseif mask_mode == 2
 end
 
 
-[thisparams,thisnames,thispred] = vRF_fitCSS(fitdata,stimmask,stimcoords,samplingrate);
+[thisparams,thisnames,thispred,thisparams_grid,thispred_grid] = vRF_fitCSS(fitdata,stimmask,stimcoords,samplingrate);
 
 fn2s = sprintf('%s/retinotopy/vRF_testfits/%s_%s_%s_%s_testfits_mask%i_res%i.mat',vRF_loadRoot,subj,sess,ROI,data_type,mask_mode,size(stimmask,1));
 fprintf('saving to %s\n',fn2s);
-save(fn2s,'thisparams','thisnames','thispred','mask_mode','stimmask','fitdata','ROI_fn','stimcoords');
+save(fn2s,'thisparams','thisnames','thispred','thisparams_grid','thispred_grid','mask_mode','stimmask','fitdata','ROI_fn','stimcoords');
 
 % plot a few example voxels
 if show_plots == 1

@@ -36,7 +36,7 @@
 
 
 
-function [bestfit_params, param_names, bestfit_pred] = vRF_fitCSS(fitdata,stimmask,stimcoords,samplingrate)
+function [bestfit_params, param_names, bestfit_pred, bestfit_params_grid, bestfit_pred_grid] = vRF_fitCSS(fitdata,stimmask,stimcoords,samplingrate)
 
 % params that govern memory usage, etc
 models_per_iter = 5000; % for generating model predictions, how many at a time?
@@ -44,7 +44,8 @@ models_per_iter = 5000; % for generating model predictions, how many at a time?
 % parallel setting: 0 = no parallel, n (where n > 0) = run parpool w/ n
 % workers, -n  = run parpool w/ n workers and use GPU (so n must be <= #
 % GPUs)
-par_setting = -1;
+par_setting_grid = -1;
+par_setting_ft   = 28;
 
 % some 'default' params (TODO)
 gridparams_dxy  = 0.5; % 0.25; % for gridfit, how closely to sample X,Y
@@ -76,6 +77,7 @@ end
 % x, y - default to square grid, constrained to a circle with radius equal
 % to maximum hypotenuse of stimulus grid (e.g., corners)
 maxecc = max(hypot(stimcoords{1},stimcoords{2}));
+%maxecc = max([stimcoords{1}(:);stimcoords{2}(:)]);
 
 % (trick here is to make sure we include 0,0...
 % tmpgridlim = gridparams_dxy * ceil(maxecc/gridparams_dxy)
@@ -169,14 +171,14 @@ fprintf('Culling %i (%.02f%%) of models...\n',sum(badidx),100*mean(badidx));
 allpredbold = allpredbold(~badidx,:);
 gridparams = gridparams(~badidx,:);
 
-if par_setting > 0
-    parpool(par_setting);
+if par_setting_grid > 0
+    parpool(par_setting_grid);
 end
 
-if par_setting>=0
-    [bf_params, err, bf_fcn] = gridfit(fitdata,allpredbold.',gridparams,[],[],par_setting > 0);
+if par_setting_grid>=0
+    [bf_params, err, bf_fcn] = gridfit(fitdata,allpredbold.',gridparams,[],[],par_setting_grid > 0);
 
-elseif par_setting <0
+elseif par_setting_grid <0
 
     % gridfitgpu - this requires extracting/computing the best-fit
     % timecourse after the grid fit...
@@ -184,9 +186,9 @@ elseif par_setting <0
     gpumodel(:,1,:) = allpredbold.';
     gpumodel(:,2,:) = 1; % constant term
     
-    if par_setting == -1
+    if par_setting_grid == -1
         [bf_idx,bf_b,sse] = gridfitgpu(single(fitdata),single(gpumodel),0,0.125);
-    elseif par_setting < -1
+    elseif par_setting_grid < -1
         % NOTE: right now, this is a bit slower than above, due to the
         % overhead associated w/ spawning a parpool & distributing the task
         [bf_idx,bf_b,sse] = gridfitgpu_par(single(fitdata),single(gpumodel),0,0.125);
@@ -202,21 +204,43 @@ elseif par_setting <0
 
 end
 
-if par_setting > 0
+if par_setting_grid > 0 && par_setting_grid ~= par_setting_ft
     delete(gcp);
 end
 
 sstotal = sum((fitdata-mean(fitdata,1)).^2,1);
-bf_ve = 1 - err ./ sstotal;
+bf_ve_grid = 1 - err ./ sstotal;
 
 % for grid...
-bestfit_params = [bf_params bf_ve.'];
+bestfit_params_grid = [bf_params bf_ve_grid.'];
 param_names = {'x0','y0','sigma','exp','amp','baseline','ve'};  
-bestfit_pred = bf_fcn.';
+bestfit_pred_grid = bf_fcn.';
 
 % TODO:
 % - add constrained fine-tuning
 % - (future) only compute grid predictions once...re-use across ROIs
 
+if par_setting_ft > 0 && par_setting_grid ~=par_setting_ft
+    parpool(par_setting_ft);
+end
+
+% use the grid limits for the fine-tuning limits (here: same for all vox)
+ft_lims = [gridlims_xy; gridlims_xy; gridlims_sig; gridlims_exp; -inf inf; -inf inf].'; 
+
+fitfcn = @(evalpts,p) filter(hrf_kernel(:), 1, (vRF_2dGaussian_nonlinear(evalpts,p)* stimmask_mat) .^ p(4), [], 2);
+[bf_ft,bf_err,bf_fcn,ex_flag] = gridfit_finetune_constr(fitdata,fitfcn,bf_params,scrpts,ft_lims,par_setting_ft>0);
+
+% TODO: figure this out a bit better - try to keep a parallel pool going as
+% long as possible...
+if par_setting_ft > 0 
+    delete(gcp)
+end
+
+% TODO:
+% - unique constraints for each voxel....
+bf_ve = 1 - bf_err ./ sstotal.';
+bestfit_params = [bf_ft bf_ve];
+bestfit_pred = bf_fcn;
+%bestfit_params = [bf_ft ve_ft];
 
 return
