@@ -3,11 +3,29 @@
 %
 % saves data into ROI files for each subj, session
 %
+% GOAL: save out files containing retinotopy timecouress for further
+% testing alongside a 'neutral' set of RFs (NOT NECESSARILY those fit to
+% the data contained within the file!!!!)
+%
+% IF: sess_rf == sess, then the RF params are those fit to the extracted
+% data
+% OTHERWISE: saved RF params are based on sess_rf; saved data is based on
+% sess
+%
+%
 % stores:
-% - best-fit RFs (rf. struct) - from sess_rf
-% - data used to fit model (bar_width_1.nii.gz files...) [z-scored and psc]
+% - best-fit RFs (rf. struct) - from sess_rf (VISTA)
+% - data that can be used to fit a model (bar_width_1.nii.gz files...) [z-scored and psc]
+%   (from VISTA) --> if sess_rf matches sess, then this is the data that
+%   was used to fit the model
 % - 'raw' data from each imaging run [z-scored and psc]
 % - stimulus sequence [yes, 7/19/2020]
+%
+% for vRFattn:
+% - want 'neutral' RFs, so session files will save data for each condition,
+%   and RFs from attending continuous bar
+%
+%
 %
 % voxel selection IDENTICAL to fspri script, so those 'mapping' data can be
 % loaded to compare
@@ -28,35 +46,28 @@ root = vRF_loadRoot;
 
 if nargin < 1 || isempty(subj)
     % NOTE: for sub004, need to use _25mm files...
-    subj = {'sub006','sub007','sub008','sub010','sub011','sub012'};
-    %subj = {'sub003'};
-    %subj = {'sub004'};
+
+    subj = {'sub003','sub004','sub005'}; % vRFattn subj
+
 end
 
 % this is the sessions to extract data from...
 if nargin < 2 || isempty(sess)
     
-    % ALL SUBJ:
-    % sess = {{'barret_contwidth_pilot01'},{'barret01'},{'barret_contwidth_pilot02'},{'barret_contwidth01_nosacc'},{'barret_contwidth_pilot01'},{'barret_contwidth01'},{'barret_contwidth01'},{'barret_contwidth01'}};
-    sess = {{'barret_contwidth_pilot02'},{'barret_contwidth01_nosacc'},{'barret_contwidth_pilot01'},{'barret_contwidth01'},{'barret_contwidth01'},{'barret_contwidth01'}}; % all but sub003 and sub004
-    %sess = {{'barret_contwidth_pilot01'}}; % sub003
-    %sess = {{'barret01'}}; % sub004
+    % vRFattn: (VSS)
+    sess = {{'barret_attnCont_sess01','barret_attnSeq1_sess01','barret_attnSeq2_sess01'},{'barret_attnCont_sess01','barret_attnSeq1_sess01','barret_attnSeq2_sess01','barret_attnCont_sess02','barret_attnSeq1_sess02','barret_attnSeq2_sess02'},{'barret_attnCont_sess01','barret_attnSeq1_sess01','barret_attnSeq2_sess01'}};
+
 end
 
 % heuristic for defining RF session - can make more explicit, but this
 % should work ok
 if nargin < 3 || isempty(sess_rf)
-    %sess_rf = sess; % by default, load the RF fits from the same place as we load the retinotopy data
+    
+    % by default, use the 'first' session in the list for the 'neutral' RF
+    % params (from vista)
     for ss = 1:length(subj)
         sess_rf{ss} = sess{ss}{1};
     end
-%     sess_rf = cell(length(subj),1);
-%     for ss = 1:length(subj)
-%         %sess_rf{ss} = 'barret01';
-%         sess_rf{ss} = 'barret_contwidth01';
-%         %sess_rf{ss} = 'barret_attnCont_sess01';
-%         %sess_rf{ss} = 'barret_attnCont_sess01';
-%     end
 end
 
 % should work...
@@ -65,18 +76,19 @@ root_rf = sprintf('%s/retinotopy/',root);
 
 % in case ROIs live somewhere else...
 root_ROI = root_rf;
-ROI_dir = 'rois'; % which ROIs are we using? (vox size...)
-%ROI_dir = 'rois_25mm';
+ROI_dir = 'rois_25mm'; % which ROIs are we using? (vox size...)
+
 
 if nargin < 4 || isempty(ROIs)
-    ROIs = {'V1','V2','V3','V3AB','hV4','VO1','VO2','LO1','LO2','TO1','TO2','IPS0','IPS1','IPS2','IPS3'};
+    %ROIs = {'V1','V2','V3','V3AB','hV4','VO1','VO2','LO1','LO2','TO1','TO2','IPS0','IPS1','IPS2','IPS3'};
+    ROIs = {'V1','V2','V3','V3AB','hV4','VO1','VO2','LO1','LO2','IPS0','IPS1','IPS2'}; % wmApple
 end
 
 roi_str = cell(size(ROIs));
 
 %task_TRs = 304; % for sub004's 1.3 s TR data, 304 TRs
-%task_TRs = 448; % for sub003's earlier version, 448 TRs
-task_TRs = 460; % all other subj (sub006, sub007, sub008, sub010, sub011, sub012) - 460 TRs
+%task_TRs = 448; % for sub003's earlier version, 448 TRs (& sub005)
+%task_TRs = 460; % all other subj (sub006, sub007, sub008, sub010, sub011, sub012) - 460 TRs
 
 % which functional files do we want? func or surf
 %func_type = 'surf_25mm'; % 'surf' or 'func' or 'ss5' or 'surf_25mm' (sub004)
@@ -109,6 +121,7 @@ rf_fields = fieldnames(RF_paramIdx);
 
 
 for ss = 1:length(subj)
+    
     
     % load all ROIs, best-fit RF data
 
@@ -189,6 +202,15 @@ for ss = 1:length(subj)
         stim_imgs = stimdata.images;
         stim_time = paramsdata.stimulus.seqtiming;
         clear stimdata paramsdata;
+        
+        % NOTE: not presently tested w/ 1300 ms data...
+        % set task_TRs based on subj, session
+        if strcmpi(subj{ss},'sub005') || (strcmpi(subj{ss},'sub003') && strcmpi(sess{ss}{sess_idx},'barret_contwidth_pilot01'))
+            task_TRs = 448;
+        else
+            task_TRs = 460; % most subj
+        end
+        
         
         
         % load 'raw' data
@@ -292,18 +314,18 @@ for ss = 1:length(subj)
             
             % save
             rf = roi_rf_struct{rr};
+
+            this_sess = sess{ss}{sess_idx};
+            this_sess_rf = sess_rf{ss};
+            
             
             
             fn2s = sprintf('%s%s/%s_ROIdata/%s_%s_%s_%s.mat',root,task_dir,task_dir,subj{ss},sess{ss}{sess_idx},roi_str{rr},func_type);
             fprintf('saving to %s...\n',fn2s);
-            save(fn2s,'d_all','d_allz','d_avg','d_avgz','r_all','sess_all','r_all','fn_all','rf_file','rf','func_file','fn_avg','stim_imgs','stim_time','stim_fn','params_fn');
-            clear rf d_all d_allz d_avg d_avgz;
+            save(fn2s,'d_all','d_allz','d_avg','d_avgz','r_all','sess_all','r_all','fn_all','rf_file','rf','func_file','fn_avg','stim_imgs','stim_time','stim_fn','params_fn','this_sess','this_sess_rf');
+            clear rf d_all d_allz d_avg d_avgz this_sess this_sess_rf;
             
         end
-        
-       
-        
-        
         
         % TODO: load best-fit data...(model predictions)
         
